@@ -10,3 +10,7 @@ Understanding and implementing the algorithms. Implementation of first algorithm
 **5th June 2018**
 
 Implemented second algorithm (Ganter's FCA Algorithm). Started to implement the next one
+
+**6th June 2018**
+
+Read about clustering in unsupervised problems and have implemented the third algorithm (K Means Algorithm). Started to implement the next ones which are on hierarchical clustering.  
