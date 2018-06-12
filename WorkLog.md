@@ -20,6 +20,7 @@ Read about clustering in unsupervised problems and have implemented the third al
 Read about Hierarchical clustering approaches like Agglomerative Clustering, Divisive Clustering and Bi-Section KMeans and understood the algorithms given in the text (Leaving the implementation part for Algo 4, 5, 6) 
 
 **8th June 2018**
+
 Reading chapter 6 of the book that looks into concept hierarchy induction and the common approaches to learning the concept hierachies.
 Read about the apporoach based on FCA which groups and hierarchically orders words or terms according to use or behaviour in corpus. Need to implement Algorithm 7 where we will form the lattice from the respective document and hence the concept hierarchy. 
 
