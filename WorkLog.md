@@ -40,3 +40,13 @@ This algorithm divided into several parts.
 10. After this, we transform it to partial order (closer to the final desired output). It is compacted to get final concept hierarchy. 
 
 I also tried implemeting this algo using SpaCy as it is faster in terms of speed and gives results with higher precision. Faced a few difficulties. Will still try to finish after a few days. 
+
+**13th June 2018**
+
+Understanding and implementing Algorithm 8 and 9 - Guided Clustering Algorithm.
+In the previous algorithms there were a few problems. First one is data sparseness where some similarities are spurious and due to the missing data. Secondly, there is a problem of being labelling the clusters that have been produced. This algorithm looks into solving these issues. 
+
+This algorithm uses the hierarchical agglomerative clustering approach. Hypernyms are extracted from different resources which are used to guide this clustering algorithm. Rule is that two terms will clustered only if there is a corresponding hypernym according to the oracle. If one term is the hypernym of the other we add them as siblings. Hypernym oracle is formed from WordNet, Web and the corpus. The context of the term is a vector of the syntactic dependencies which are extracted from the corpus. Similarity is taken as the cosine of the two vectors t1 and t2. 
+
+Understood the entire algorithm with an example to demonstrate. 
+
