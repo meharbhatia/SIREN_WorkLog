@@ -39,10 +39,10 @@ def simDoc(text1, text2):
 	return similarity
 
 #example texts are added! 
-f1 = open('C:/Python34/Internship/Algorithms/Algorithm 7/pizza_document.txt', 'r')
+f1 = open('''Enter text1 link here''', 'r')
 text1 = preprocessing(f1.read())
 
-f2 = open('C:/Python34/Internship/Algorithms/Algorithm 7/pizza_document_2.txt', 'r')
+f2 = open('''Enter text2 link here''', 'r')
 text2 = preprocessing(f2.read())
 
 similarity = simDoc(text1, text2)
