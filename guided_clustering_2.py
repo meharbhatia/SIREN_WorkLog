@@ -1,0 +1,288 @@
+from bs4 import BeautifulSoup
+from bs4.element import Comment
+
+from anytree import Node, RenderTree, AsciiStyle
+import urllib.request, itertools, re
+from collections import Counter, Iterable
+
+import nltk
+from nltk import word_tokenize, pos_tag, ne_chunk
+from gensim.models import KeyedVectors
+from nltk.corpus import wordnet as wn
+
+#import pronto 
+
+#onto = pronto.Ontology('C:/Python34/Internship/pizza_Ontology/pizza.owl')
+#print(onto.obo)
+
+def tag_visible(element):
+	if element.parent.name in ['style', 'script', 'head', 'title', 'meta', '[document]']:
+		return False
+	if isinstance(element, Comment):
+		return False
+	return True
+
+
+def text_from_html(body):
+	# Scraping a Web Document
+
+	soup = BeautifulSoup(body, 'html.parser')
+	texts = soup.findAll(text=True)
+	visible_texts = filter(tag_visible, texts)  
+	return u" ".join(t.strip() for t in visible_texts)
+
+def getTextFromURL(url):
+	html = urllib.request.urlopen(url).read()
+	inputText = text_from_html(html)
+	return inputText
+
+def findNodeByName(nodeName, nodesList):
+	searchNode = next((p for p in nodesList if p.name==nodeName),None)
+	if(not searchNode):
+		searchNode = Node(nodeName)
+		nodesList.append(searchNode)
+	return searchNode
+
+def searchISA(node, type):
+	result=()
+	if type==0:
+		result = anytree.search.findall(node, filter_=lambda x: (x==node and not node.parent))
+	else:
+		result = anytree.search.findall(node, filter_=lambda x: (x==node and node.parent))
+	return result
+
+def flatten(l):
+	for el in l:
+		if isinstance(el, Iterable) and not isinstance(el, (str, bytes)):
+			yield from flatten(el)
+		else:
+			yield el
+
+def getHyponymsFromWordnet(word):
+	allSynsets = wn.synsets(word)
+	multiList = [[[a.name() for a in b.lemmas()] for b in c.hyponyms()]for c in wn.synsets(word)]
+	finalList = flatten(multiList)
+	return finalList
+
+def getHypernymsFromWordnet(word):
+	allSynsets = wn.synsets(word)
+	multiList = [[[a.name() for a in b.lemmas()] for b in c.hypernyms()]for c in wn.synsets(word)]
+	finalList = flatten(multiList)
+	return Counter(finalList)
+
+def initNodesList(wordSet):
+	nodesList = []
+	for wordNode in wordSet:
+		nodesList.append(Node(wordNode))
+	return nodesList
+
+def processWordSet(wordSet):
+	for (i,word) in enumerate(wordSet):
+		wordSet[i] = re.sub("^[^a-zA-Z]*|[^a-zA-Z(?<!(s\'))]*$","",word)
+	return wordSet
+
+def compareTuple(x,model):
+	try:
+		sim = model.similarity(x[0],x[1])
+		return sim
+	except:
+		return 0
+
+def fetchFromHypernymDict(hypernymDict,a,b):
+	m = None
+	try:
+		m = hypernymDict[a][b]
+	except KeyError as e:
+		hypernymDict[a] = getHypernymsFromWordnet(a)
+		m = hypernymDict[a][b]
+	return m
+
+def tokenize_sentences(text):
+    sentences = nltk.sent_tokenize(text)
+    sentences = [nltk.word_tokenize(sent) for sent in sentences]
+    return sentences
+
+def get_wordset(text):
+    """Returns Named Entities using NLTK Chunking"""
+    wordSet = []
+    sentences = tokenize_sentences(text)
+
+    # Part of Speech Tagging
+    sentences = [nltk.pos_tag(sent) for sent in sentences]
+    for tagged_sentence in sentences:
+        for chunk in nltk.ne_chunk(tagged_sentence):
+            if type(chunk) == nltk.tree.Tree:
+                wordSet.append(' '.join([c[0] for c in chunk]).lower())
+    return wordSet
+
+def GuidedClustering():
+
+	# Specify URL here
+	# url = 'https://www.webstaurantstore.com/article/101/types-of-pizza.html'
+	# text = getTextFromURL(url)
+
+	# By opening a local file
+	file = open("C:/Python34/Internship/Algorithms/Algorithm 7/pizza_document_2.txt")
+	text = file.read()
+
+	# List of words in document
+	#wordSet = get_wordset(text)
+	
+	#wordSet = processWordSet(list(set(text.split())))
+	#wordSet = list(set(filter(None, wordSet)))
+
+	wordSet = ["pizza","american_pizza","pepperoni_pizza","sausage_pizza","blush_wine","wine","bordeaux","burgundy","california_wine","Car","beach_wagon","cruiser","hatchback","pari-mutuel_machine","computer","digital_computer"]
+	# print (wordSet)
+
+	# Load Google News model
+	model = KeyedVectors.load_word2vec_format("C:/Python34/Internship/GoogleNews-vectors-negative300.bin", binary=True, limit=500000)
+
+	# Sort by decreasing similarity
+	tuplesList = list(itertools.combinations(wordSet,2))
+	sortedList = sorted(tuplesList, key=lambda x : compareTuple(x,model), reverse=True)
+
+	clusteredSet = set()
+	hypernymDict = {}
+
+	root = Node("root")
+	nodesList = initNodesList(wordSet)
+
+	word123 = 'pizza'
+	t = getHyponymsFromWordnet(word123)
+	print(t)
+	
+	for word in wordSet:
+		hypernymDict[word] = getHypernymsFromWordnet(word)
+
+	# print (hypernymDict)
+	
+	# print (nodesList)
+	for i,(t1,t2) in enumerate(sortedList):
+		t1Node = findNodeByName(t1,nodesList)
+		t2Node = findNodeByName(t2,nodesList)
+		# print (t1, t2)
+		# print (i,"/",len(sortedList))
+		
+		# print (t1,t2,t1Node,t2Node,hypernymDict[t1],hypernymDict[t2])
+		if(not t1Node.parent or not t2Node.parent):
+			intersectHypernym = list((hypernymDict[t1] & hypernymDict[t2]).elements())
+			try:
+				h = max(intersectHypernym, key=lambda a: hypernymDict[t1][a]+hypernymDict[t2][a])
+				hNode = findNodeByName(h,nodesList)
+			except:
+				h = ''
+			if (fetchFromHypernymDict(hypernymDict,t2,t1)):
+				if(fetchFromHypernymDict(hypernymDict,t1,t2) and (fetchFromHypernymDict(hypernymDict,t1,t2)>fetchFromHypernymDict(hypernymDict,t2,t1))):
+					t1Node.parent = t2Node
+				else:
+					t2Node.parent = t1Node
+			elif (fetchFromHypernymDict(hypernymDict,t1,t2)):
+				t1Node.parent = t2Node
+			elif (h):
+				tdash = t1Node.parent
+				tddash = t2Node.parent
+				if (tdash):
+					tdashName = tdash.name
+					m = fetchFromHypernymDict(hypernymDict,tdashName,h)
+					n = fetchFromHypernymDict(hypernymDict,h,tdashName)
+					if(tdashName==h):
+						try:
+							t2Node.parent = tdash
+						except:
+							pass
+					elif(m and (not(n) or m<n)):
+						try:
+							t2Node.parent = tdash
+						except:
+							pass
+						try:
+							if(not tdash.parent):
+								tdash.parent = hNode
+						except:
+							pass
+					else:
+						try:
+							t2Node.parent = hNode
+						except:
+							pass
+						try:
+							if(not tdash.parent):
+								hNode.parent = tdash
+						except:
+							pass
+				elif (tddash):
+					tddashName = tddash.name
+					n = fetchFromHypernymDict(hypernymDict,tddashName,h)
+					m = fetchFromHypernymDict(hypernymDict,h,tddashName)
+					if(tddashName==h):
+						t1Node.parent = tddash
+					elif(m and (not(n) or m<n)):
+						try:
+							#As t1 has not yet been classified
+							t1Node.parent = tddash
+						except:
+							pass
+						try:
+							if(not tddash.parent):
+								tddash.parent = hNode
+						except:
+							pass
+
+					else:
+						#As t1 has not yet been classified
+						try:
+							t1Node.parent = hNode
+						except:
+							pass
+						
+						try:
+							if(not tddash.parent):
+								hNode.parent = tddash
+						except:
+							pass
+				else:
+					#As t1 has not yet been classified
+					try:
+						t1Node.parent = hNode
+					except:
+						pass
+					
+					#As t2 has not yet been classified
+					try:
+						t2Node.parent = hNode
+					except:
+						pass
+			else:
+				clusteredSet = clusteredSet | {(t1Node,t2Node)}
+	
+	# print (nodesList)
+	# print (clusteredSet)
+	# print (wordSe)
+	for word in wordSet:
+		currNode = findNodeByName(word,nodesList)
+		# print (currNode)
+		if(not(currNode.parent or currNode.children)):
+			hyponyms = getHyponymsFromWordnet(word)
+			for hyponym in hyponyms:
+				if word in hyponym:
+					hyponymNode = Node(hyponym)
+					hyponymNode.parent = currNode
+					nodesList.append(hyponymNode)
+
+	# print (nodesList)
+	for node in nodesList:
+		# print (node)
+		if(not node.parent):
+			node.parent = root
+	# print (nodesList)
+	for (t1,t2) in clusteredSet:
+		if(not t1.parent):
+			t1.parent = root
+		if(not t2.parent):
+			t2.parent = root
+	# print (clusteredSet, root)
+	return (nodesList,clusteredSet,root)
+
+result = GuidedClustering()
+# print (result[0])
+print(RenderTree(result[2], style=AsciiStyle()).by_attr())
