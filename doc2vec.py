@@ -4,6 +4,7 @@ from nltk.probability import FreqDist
 import warnings
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 
+
 stopwords_en = stopwords.words("english")
 
 def preprocessing(raw):
@@ -25,26 +26,32 @@ def simDoc(text1, text2):
 		text2_count_dict[word] = freqd_text2[word]
 
 	taggeddocs = []
-	doc1 = TaggedDocument(words = text1, tags = [u'NEWS_1'])
+	for i in enumerate(text1):
+		words = text1
+		doc1 = TaggedDocument(words, [i])
 	taggeddocs.append(doc1)
-	doc2 = TaggedDocument(words = text2, tags = [u'NEWS_2'])
+	for i in enumerate(text2):
+		words = text2
+		doc2 = TaggedDocument(words, [i])
 	taggeddocs.append(doc2)
-
+	
 	#build the modwl
-	model = Doc2Vec(taggeddocs, dm =0, alpha=0.025, size=20, min_alpha=0.025, min_count=0)
-
+	model = Doc2Vec(dm =0, alpha=0.025, vector_size=20, min_alpha=0.025, min_count=0)
+	model.build_vocab(taggeddocs)
 	model.train(taggeddocs, epochs=model.iter, total_examples=model.corpus_count)
-
-	similarity = model.n_similarity(text1, text2)
+	
+	print("Saved")
+	
+	similarity = model.n_similarity(text1, text2
 	return similarity
 
 #example texts are added! 
-f1 = open('''Enter text1 link here''', 'r')
+f1 = open('C:/Python34/Internship/Algorithms/Algorithm 7/pizza_document.txt', 'r')
 text1 = preprocessing(f1.read())
 
-f2 = open('''Enter text2 link here''', 'r')
+f2 = open('C:/Python34/Internship/Algorithms/Algorithm 7/pizza_document_2.txt', 'r')
 text2 = preprocessing(f2.read())
+
 
 similarity = simDoc(text1, text2)
 print("Similarity index: {:4.2f} %".format(similarity*100))
-
