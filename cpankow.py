@@ -9,8 +9,7 @@ from bs4.element import Comment
 import requests, re, urllib, warnings
 from urllib.parse import urlparse
 from urllib.error import HTTPError
-
-from time import sleep
+import operator
 
 def checkAppropriateURL(url):
 	parsedURL = urlparse(url)	
@@ -30,11 +29,11 @@ def checkAppropriateURL(url):
 	return True
 
 def scrapeGoogleForAbstracts(query, count):
-	#print ("Query",query)
+	#print (query)
 	words = query.split()
 	#print(words)
 	q = ("+").join(words)
-	print(q)
+	print(q) #Ex: such + as + pizza + base
 	gurl = "https://www.google.co.in/search?limit=20&q=" + q
 	print ("gurl is:",gurl)
 
@@ -43,8 +42,9 @@ def scrapeGoogleForAbstracts(query, count):
 
 	soup = BeautifulSoup(data, "lxml")
 	divText = soup.find(id="resultStats").text
-
+	
 	numberString = re.match("About (.*) results", divText).group(1)
+	
 	number = int("".join(numberString.split(",")))
 	h3Rows = soup.find_all("h3", {"class":"r"})
 	urls = []
@@ -60,15 +60,14 @@ def scrapeGoogleForAbstracts(query, count):
 		except:
 			continue
 		par = urllib.parse.parse_qs(urlparse(url).query)
-	#	print(par)
 		appendingURL = par['q'][0]
-		print (appendingURL)
+		#print (appendingURL)
 		if(not checkAppropriateURL(appendingURL)):
 			print ("no",appendingURL)
 			continue
 		# print ("yes",appendingURL)
 		urls.append(appendingURL)
-	# print(len(urls),urls)
+	#print(len(urls))
 	start = 20
 	i = 1
 	while(len(urls)<count):
@@ -98,7 +97,9 @@ def scrapeGoogleForAbstracts(query, count):
 				raise
 			except:
 				continue
-	print ("This is list of all URLs",urls[:count])
+	print("Here is the list of all URLs \n")
+	for x in urls[:count]:
+		print("\n", x)
 	return (number, urls[:count])
 
 def getInstances(text):
@@ -108,21 +109,22 @@ def getInstances(text):
 		INSTANCE:   {(<DT+>)?(<JJ+>)?<PRE>(<MID><PRE>)?}
 	"""
 	chunker = RegexpParser(grammar)
-	#print("chunker",chunker)
+	#print(chunker)
+	#tokenised and pos tagged
 	taggedText = pos_tag(word_tokenize(text))
-	#print("taggedText",taggedText)
+	#print(taggedText)
+	#Parsed using chunker
 	textChunks = chunker.parse(taggedText)
-
-	print ("textChunks",textChunks)
+	#print (textChunks)
 	
 	current_chunk = []
 
 	for i in textChunks:
 		if (type(i) == Tree and i.label() == "INSTANCE"):
-			# print (i.leaves())
+			#print (i.leaves())
 			current_chunk.append(" ".join([token for token, pos in i.leaves()]))
 
-	print ("Chunksss",current_chunk)
+	print ("current_chunk",current_chunk)
 	return current_chunk
 
 def getConcepts(text):
@@ -139,13 +141,24 @@ def getConcepts(text):
 	return current_chunk
 
 def getCluesPatternsTuple():
-	Hearsts = []
+	Hearsts =[] 
+	'''("( )?such as (NP_\w+ ? (, )?(and |or )?)+)"," such as ", "first"),
+    ("(such NP_\w+ (, )?as (NP_\w+ ?(, )?(and |or )?)+)", " such as ", "first"),
+    ("((NP_\w+ ?(, )?)+(and )?other NP_\w+)", "and other", "last"),
+    ("((NP_\w+ ?(, )?)+(or )?other NP_\w+)", "or other ", "last"),
+    ("(NP_\w+ (, )?including (NP_\w+ ?(, )?(and |or )?)+)"," including ",  "first"),
+    ("(NP_\w+ (, )?especially (NP_\w+ ?(, )?(and |or )?)+)", " especially ", "first"),
+    ]
+    '''
 	Hearsts.append((["(CONCEPT)","(such as )","(INSTANCE)"],"such as ","first"))
-	Hearsts.append((["(CONCEPT,?)","(\(?especially\,?)","(INSTANCE)"],"especially","first"))
-	Hearsts.append((["(CONCEPT,?)","(including )","(INSTANCE)"],"including","first"))
-	Hearsts.append((["(INSTANCE,?)","(and other )","(CONCEPT)"],"and other","last"))
-	Hearsts.append((["(INSTANCE,?)","(or other )","(CONCEPT)"],"or other","last"))
-	Hearsts.append((["(CONCEPT,?)","(like )","(INSTANCE)"],"like","first"))
+	Hearsts.append((["(CONCEPT,?)","(\(?especially \,?)","(INSTANCE)"]," especially ","first"))
+	Hearsts.append((["(CONCEPT,?)","( including )","(INSTANCE)"]," including ","first"))
+	Hearsts.append((["(INSTANCE,?)","( and other )","(CONCEPT)"],"and other","last"))
+	Hearsts.append((["(INSTANCE,?)","( or other )","(CONCEPT)"]," or other","last"))
+	Hearsts.append((["(CONCEPT,?)","( like )","(INSTANCE)"]," like ","first"))
+	
+	
+	print(Hearsts)
 	return (Hearsts)
 
 def URLInput():
@@ -188,12 +201,14 @@ def getTextFromURL(url):
 
 def getAbstracts(query, count):
 	(number, urls) = scrapeGoogleForAbstracts(query, count)
-	# print ("lenght",len(urls))
+	print(number)
+	print ("LENGTH",len(urls))
 	texts = []
 	for url in urls:
-		print (url)
+		#print (url)
 		try:
 			text = getTextFromURL(url)
+			#print(text)
 		except (GeneratorExit, KeyboardInterrupt, SystemExit):
 			raise
 		except:
@@ -222,14 +237,19 @@ def simDoc(text1, text2):
 		text2_count_dict[word] = freqd_text2[word]
 
 	taggeddocs = []
-	doc1 = TaggedDocument(words = text1, tags = [u'NEWS_1'])
+	for i in enumerate(text1):
+		words = text1
+		doc1 = TaggedDocument(words, [i])
 	taggeddocs.append(doc1)
-	doc2 = TaggedDocument(words = text2, tags = [u'NEWS_2'])
+	
+	for i in enumerate(text2):
+		words = text2
+		doc2 = TaggedDocument(words, [i])
 	taggeddocs.append(doc2)
 
 	#build the modwl
-	model = Doc2Vec(taggeddocs, dm =0, alpha=0.025, vector_size=20, min_alpha=0.025, min_count=0)
-
+	model = Doc2Vec(dm =0, alpha=0.025, vector_size=20, min_alpha=0.025, min_count=0)
+	model.build_vocab(taggeddocs)
 	model.train(taggeddocs, epochs=model.iter, total_examples=model.corpus_count)
 	print ("FF",len(text1),len(text2))
 	similarity = model.n_similarity(text1, text2)
@@ -242,21 +262,25 @@ def main(text, threshold):
 		#Add Code for iterating through patterns and clues here
 		cluesPatternsTuple = getCluesPatternsTuple()
 		
-		#print("CluePAttern",cluesPatternsTuple)
 		hits = {}
 		for c,(pattern,clue,order) in enumerate(cluesPatternsTuple):
+			#print(list(enumerate(cluesPatternsTuple)))
+			# 0 is such as, 1 is especially, 2 is including...
+			#print(clue)#'such as' for first iteration
+			#print(order)
 			if(order=="first"):
 				clue_i = clue+instance
 			else:
 				clue_i = instance+clue
-			
+
+			print(clue_i) #such as pizza base
+						
 			(number, allAbstracts) = getAbstracts(clue_i,20)
-			print ("Allll", allAbstracts)
-			
-			
+			#print ("Allll", allAbstracts) #all text
+			print("allAbstracts are taken")
 			for (url,abstract) in allAbstracts:
 				filename = ''.join(e for e in url if e.isalnum())
-				f = open(filename+".txt","w+")
+				f = open(filename+".txt","w+", encoding = 'utf-8')
 				f.write(abstract)
 				f.close()
 
@@ -269,46 +293,49 @@ def main(text, threshold):
 				if(not len(text1)):
 					continue
 				similarity = simDoc(text1, text2)
-
+				print(similarity)
+				
 				if similarity>threshold:
 					print (c,"::",cnt,":",url)
 					concepts = getConcepts(abstract)
+					
 					conceptRegex = "|".join(concepts)
 					conceptRegex = conceptRegex.replace(".","\.").replace("*","\*").replace("+","\+").replace("[","\[").replace("]","\]").replace("{","\{").replace("}","\}").replace("^","\^").replace("$","\$").replace("(","\(").replace(")","\)").replace("?","\?").replace("-","\-")
-					# print(pattern)
 					tempPattern = pattern[:]
+					
+					
 					concept_idx = [idx for idx,i in enumerate(tempPattern) if "CONCEPT" in i][0]
 					tempPattern[concept_idx] = tempPattern[concept_idx].replace("CONCEPT",conceptRegex)
 
 					instance_idx = [idx for idx,i in enumerate(tempPattern) if "INSTANCE" in i][0]
 					tempPattern[instance_idx] = tempPattern[instance_idx].replace("INSTANCE",instance)
-
 					regex = " ".join(tempPattern)
-					regex = regex
-					# print (regex)
-					match = re.findall(regex,abstract)
+					match = re.findall(regex2,abstract)
+					print("MMM", match)
 					if(match):
 						if match[0] in hits:
 							hits[match[0]] += 1
 						else:
 							hits[match[0]] = 1
+		print(hits)
+		print(hits.items())
 		
-		concept = max(hits.items(), key=operator.itemgetter(1))[0]
+		concept = max((hits.items()), key=operator.itemgetter(1))
 		finalList.append((concept,instance))
+		
 
-		#Uncomment the line below. clue[i] represents the query, ie. the clue for the ith Instance
-		#number, texts = getAbstracts(clue[i])
-
-		#Insert Code for doc2Vec over here and similarity
+	print(instance)
 	print (finalList)
 	return instances
 	
+	
 
 # text = URLInput()
-text = DocInput()
+#text = DocInput()
 threshold = 0.3
 #main(text, threshold)
 
-#text = "Pizza Base"
-getInstances(text)
+text = "Pizza Base"
+#getInstances(text)
+#getCluesPatternsTuple()
 main(text, threshold)
