@@ -310,7 +310,7 @@ def main(text, threshold):
 					instance_idx = [idx for idx,i in enumerate(tempPattern) if "INSTANCE" in i][0]
 					tempPattern[instance_idx] = tempPattern[instance_idx].replace("INSTANCE",instance)
 					regex = " ".join(tempPattern)
-					match = re.findall(regex2,abstract)
+					match = re.findall(regex,abstract)
 					print("MMM", match)
 					if(match):
 						if match[0] in hits:
