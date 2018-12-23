@@ -16,13 +16,13 @@ os.environ['STANFORD_MODELS'] = ''
 wordnet_lemmatizer = WordNetLemmatizer()
 
 class SVO(object):
-    """
-    Class Methods to Extract Subject Verb Object Tuples from a Sentence
-    """
+    
+    #Class Methods to Extract Subject-Verb Pairs and Object-Verb Pairs from Text
+    
     def __init__(self):
-        """
-        Initialize the SVO Methods
-        """
+        
+        #Initialize the SVO Methods
+        
         self.noun_types = ["NN", "NNP", "NNPS","NNS","PRP"]
         self.verb_types = ["VB","VBD","VBG","VBN", "VBP", "VBZ"]
         self.adjective_types = ["JJ","JJR","JJS"]
@@ -44,20 +44,20 @@ class SVO(object):
         sub_nodes = [each for each in sub_nodes if each.pos()]
         subject = None
         for each in sub_nodes:
-        	if each.label() in self.noun_types:
-        		subject = each.leaves()
-        		break
-        #Converting list to string
-        subject = ''.join(subject)
-        #print(subject)
+            if each.label() in self.noun_types:
+                subject = each.leaves()
+                #break
+                #Converting list to string
+                subject = ''.join(subject)
+                #print(subject)
                 
-        #Lemmatization using WordNet lexical database
-        subject = nltk.word_tokenize(subject)
-        for w in subject:
-        	s = wordnet_lemmatizer.lemmatize(w)
-        	print(s)
-        	subject = s.split()
-        	print("Lemmatised Subject",subject)
+                #Lemmatization using WordNet lexical database
+                subject = nltk.word_tokenize(subject)
+                for w in subject:
+                    s = wordnet_lemmatizer.lemmatize(w)
+                    #print(s) #Prints the string
+                    subject = s.split()
+                    #print("Lemmatised Subject",subject)
 
 
             
@@ -77,7 +77,13 @@ class SVO(object):
                 for each in sub_nodes:
                     if each.label() in self.noun_types:
                         Object = each.leaves()
-                        break
+                        #break
+                        #Converting list to string
+                        Object = ''.join(Object)
+                        Object = nltk.word_tokenize(Object)
+                        for w in Object:
+                            o = wordnet_lemmatizer.lemmatize(w)
+                            Object = o.split()
                 break
             else:
                 sub_nodes = each_tree.subtrees()
@@ -85,24 +91,39 @@ class SVO(object):
                 for each in sub_nodes:
                     if each.label() in self.adjective_types:
                         Object = each.leaves()
-                        break
-                # Get first noun in the tree
-        #Converting list to string
-        Object = ''.join(Object)
-        #print(subject)
+                        #break
+                        Object = ''.join(Object)
+                        #print(subject)
                 
-        #Lemmatization using WordNet lexical database
-        Object = nltk.word_tokenize(Object)
-        for w in Object:
-        	o = wordnet_lemmatizer.lemmatize(w)
-        	print(o)
-        	Object = o.split()
-        	print("Lemmatised Object",Object)
+                        #Lemmatization using WordNet lexical database
+                        Object = nltk.word_tokenize(Object)
+                        for w in Object:
+                            o = wordnet_lemmatizer.lemmatize(w)
+                            #print(o)
+                            Object = o.split()
+                            #print("Lemmatised Object",Object)
+                
+
+
+
+                # Get first noun in the tree
+        # #Converting list to string
+        # Object = ''.join(Object)
+        # #print(subject)
+                
+        # #Lemmatization using WordNet lexical database
+        # Object = nltk.word_tokenize(Object)
+        # for w in Object:
+        # 	if w is not None:
+        # 		o = wordnet_lemmatizer.lemmatize(w)
+	       #  	#print(o)
+	       #  Object = o.split()
+	       #  	#print("Lemmatised Object",Object)
 
         self.pred_verb_phrase_siblings = None
         return {'object':Object}
 
-    def get_predicate(self, sub_tree):
+    def get_verbs(self, sub_tree):
         """
         Returns the Verb along with its attributes, Also returns a Verb Phrase
         """
@@ -110,36 +131,36 @@ class SVO(object):
         sub_nodes = []
         sub_nodes = sub_tree.subtrees()
         sub_nodes = [each for each in sub_nodes if each.pos()]
-        predicate = None
+        verb = None
         pred_verb_phrase_siblings = []
         sub_tree  = ParentedTree.convert(sub_tree)
         for each in sub_nodes:
             if each.label() in self.verb_types:
                 sub_tree = each
-                predicate = each.leaves()
+                verb = each.leaves()
                 #Converting list to string
-                predicate = ''.join(predicate)
-                #print(predicate)
+                verb = ''.join(verb)
+                #print(verb)
                 
                 #Lemmatization using WordNet lexical database
-                predicate = nltk.word_tokenize(predicate)
-                for w in predicate:
-                	p = wordnet_lemmatizer.lemmatize(w)
-                	print(p)
-                	predicate = p.split()
-                	print("Lemmatised verb",predicate)
+                verb = nltk.word_tokenize(verb)
+                for w in verb:
+                	v = wordnet_lemmatizer.lemmatize(w)
+                	#print(v)
+                	verb = v.split()
+                	#print("Lemmatised verb",verb)
                 
-        #get all predicate_verb_phrase_siblings to be able to get the object
+        #get all pred_verb_phrase_siblings to be able to get the object
         sub_tree  = ParentedTree.convert(sub_tree)
-        if predicate:
+        if verb:
              pred_verb_phrase_siblings = self.tree_root.subtrees()
              pred_verb_phrase_siblings = [each for each in pred_verb_phrase_siblings if each.label() in ["NP","PP","ADJP","ADVP"]]
              self.pred_verb_phrase_siblings = pred_verb_phrase_siblings
              #print(pred_verb_phrase_siblings)
 
-        return {'predicate':predicate}
+        return {'verb':verb}
 
-    def process_parse_tree(self,parse_tree):
+    def process_parse_tree_verb_subject(self,parse_tree):
         """
         Returns the Subject-Verb-Object Representation of a Parse Tree.
         Can Vary depending on number of 'sub-sentences' in a Parse Tree
@@ -161,7 +182,7 @@ class SVO(object):
 
         for idx, subtree in enumerate(parse_tree[0].subtrees()):
             subject =None
-            predicate = None
+            verb = None
             Object = None
             if subtree.label() in ["S", "SQ", "SBAR", "SBARQ", "SINV", "FRAG"]:
                 children_list = subtree
@@ -181,35 +202,119 @@ class SVO(object):
                     #    pdb.set_trace()
                     #"""
                     #print(children_dict["VP"])
-                    predicate = self.get_predicate(children_dict["VP"])
-                    #print(predicate)
+                    verb = self.get_verbs(children_dict["VP"])
+                    #print(verb)
                     Object = self.get_object(children_dict["VP"])
 
-                #Printing only the subject and predicate(verb)
+                #Printing only the subject and verb
                 try:
-                	if subject['subject'] and predicate['predicate']:
-                		output_dict_sv['predicate'] = predicate['predicate']
+                	if subject['subject'] and verb['verb']:
+                		output_dict_sv['verb'] = verb['verb']
                 		output_dict_sv['subject'] = subject['subject']
                 		output_list_sv.append(output_dict_sv)
+                # try:
+                #     if subject['subject'] and predicate['predicate'] and Object['object']:
+                #         output_dict['subject'] = subject['subject']
+                #         output_dict['predicate'] = predicate['predicate']
+                #         output_dict['object'] = Object['object']
+                #         output_list.append(output_dict)
                 except Exception as e:
-                        print(e)
+                        #print(e)
                         continue
-
+                
                 try:
-                	if predicate['predicate'] and Object['object']:
-                		output_dict_ov['predicate'] = predicate['predicate']
+                	if verb['verb'] and Object['object']:
+                		output_dict_ov['verb'] = verb['verb']
                 		output_dict_ov['object'] = Object['object']
                 		output_list_ov.append(output_dict_ov)
 
                 except Exception as e:
-                        print(e)
+                        #print(e)
                         continue
+
                 
                 #output_list = output_list_sv + output_list_ov
 
+        return output_list_sv
+    
 
+    def process_parse_tree_verb_object(self,parse_tree):
+        """
+        Returns the Subject-Verb-Object Representation of a Parse Tree.
+        Can Vary depending on number of 'sub-sentences' in a Parse Tree
+        """
+        self.tree_root = parse_tree
+        # Step 1 - Extract all the parse trees that start with 'S'
+        svo_list = [] # A List of SVO pairs extracted
+        
+        #List containing subject-verb pairs 
+        output_list_sv = []
+        output_list_ov = []
+        #Dictionary containing subject-verb pairs
+        output_dict_sv ={}
+        #Dictionary containing subject-verb pairs
+        output_dict_ov = {}
+
+        output_list = []
+        i=0
+
+        for idx, subtree in enumerate(parse_tree[0].subtrees()):
+            subject =None
+            verb = None
+            Object = None
+            if subtree.label() in ["S", "SQ", "SBAR", "SBARQ", "SINV", "FRAG"]:
+                children_list = subtree
+                children_values = [each_child.label() for each_child in children_list]
+                children_dict = dict(zip(children_values,children_list))
+
+
+                # Extract Subject, Verb-Phrase, Objects from Sentence sub-trees
+                if children_dict.get("NP") is not None:
+                    subject = self.get_subject(children_dict["NP"])
+
+                if children_dict.get("VP") is not None:
+                    # Extract Verb and Object
+                    #i+=1
+                    #"""
+                    #if i==1:
+                    #    pdb.set_trace()
+                    #"""
+                    #print(children_dict["VP"])
+                    verb = self.get_verbs(children_dict["VP"])
+                    #print(verb)
+                    Object = self.get_object(children_dict["VP"])
+
+                #Printing only the subject and verb
+                try:
+                	if subject['subject'] and verb['verb']:
+                		output_dict_sv['verb'] = verb['verb']
+                		output_dict_sv['subject'] = subject['subject']
+                		output_list_sv.append(output_dict_sv)
+                # try:
+                #     if subject['subject'] and predicate['predicate'] and Object['object']:
+                #         output_dict['subject'] = subject['subject']
+                #         output_dict['predicate'] = predicate['predicate']
+                #         output_dict['object'] = Object['object']
+                #         output_list.append(output_dict)
+                except Exception as e:
+                        #print(e)
+                        continue
+                
+                try:
+                	if verb['verb'] and Object['object']:
+                		output_dict_ov['verb'] = verb['verb']
+                		output_dict_ov['object'] = Object['object']
+                		output_list_ov.append(output_dict_ov)
+
+                except Exception as e:
+                        #print(e)
+                        continue
+
+                
+                #output_list = output_list_sv + output_list_ov
 
         return output_list_ov
+    
     def sentence_split(self,text):
         """
         returns the Parse Tree of a Sample
@@ -230,14 +335,24 @@ class SVO(object):
 svo = SVO()
 file = open(r"C:\Users\mehar\Desktop\IIIT_Winter\pizza.txt", "r")
 sentence = file.read()
-    
+
 sentences =  svo.sentence_split(sentence)
-val = []
+val_sub_verb = []
+val_obj_verb = []
 for sent in sentences:
     root_tree = svo.get_parse_tree(sent)
-    val.append(svo.process_parse_tree(next(root_tree)))
+    val_sub_verb.append(svo.process_parse_tree_verb_subject(next(root_tree)))
+    # val_obj_verb.append(svo.process_parse_tree_verb_object(next(root_tree)))
 
-print(*val, sep = "\n")
+print("Subject-Verb Pairs")
+print(*val_sub_verb, sep = "\n")
+# print(*val_obj_verb, sep = "\n")
+for sent in sentences:
+    root_tree = svo.get_parse_tree(sent)
+    # val_sub_verb.append(svo.process_parse_tree_verb_subject(next(root_tree)))
+    val_obj_verb.append(svo.process_parse_tree_verb_object(next(root_tree)))
+print("Object-Verb Pairs")
+print(*val_obj_verb, sep = "\n")
 
 
 
