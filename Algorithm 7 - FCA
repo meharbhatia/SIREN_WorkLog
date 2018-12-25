@@ -9,6 +9,9 @@ import nltk.draw
 import os
 import sys
 
+import csv
+import pandas as pd
+import numpy as np
 
 os.environ['STANFORD_PARSER'] = ''
 os.environ['STANFORD_MODELS'] = ''
@@ -58,9 +61,6 @@ class SVO(object):
                     #print(s) #Prints the string
                     subject = s.split()
                     #print("Lemmatised Subject",subject)
-
-
-            
         return {'subject':subject}
 
     def get_object(self,sub_tree):
@@ -102,26 +102,41 @@ class SVO(object):
                             #print(o)
                             Object = o.split()
                             #print("Lemmatised Object",Object)
-                
-
-
-
                 # Get first noun in the tree
-        # #Converting list to string
-        # Object = ''.join(Object)
-        # #print(subject)
-                
-        # #Lemmatization using WordNet lexical database
-        # Object = nltk.word_tokenize(Object)
-        # for w in Object:
-        # 	if w is not None:
-        # 		o = wordnet_lemmatizer.lemmatize(w)
-	       #  	#print(o)
-	       #  Object = o.split()
-	       #  	#print("Lemmatised Object",Object)
-
+        
         self.pred_verb_phrase_siblings = None
         return {'object':Object}
+
+    def get_verbs_list(self, sub_tree):
+        sub_nodes = []
+        sub_nodes = sub_tree.subtrees()
+        sub_nodes = [each for each in sub_nodes if each.pos()]
+        verb = None
+        verb_list = []
+
+        pred_verb_phrase_siblings = []
+        sub_tree  = ParentedTree.convert(sub_tree)
+        for each in sub_nodes:
+            if each.label() in self.verb_types:
+                sub_tree = each
+                verb = each.leaves()
+                #Converting list to string
+                verb = ''.join(verb)
+                #print(verb)
+
+                #print(verb)
+                
+                #Lemmatization using WordNet lexical database
+                verb = nltk.word_tokenize(verb)
+                for w in verb:
+                    v = wordnet_lemmatizer.lemmatize(w)
+                    # print("HEYYY",v)
+                    # # verb = v.split()
+                    # #print("Lemmatised verb",verb)
+                    #print("Y", verb)
+                    verb_list.append(v)
+        
+        return verb_list
 
     def get_verbs(self, sub_tree):
         """
@@ -132,6 +147,9 @@ class SVO(object):
         sub_nodes = sub_tree.subtrees()
         sub_nodes = [each for each in sub_nodes if each.pos()]
         verb = None
+        verb_list = []
+
+
         pred_verb_phrase_siblings = []
         sub_tree  = ParentedTree.convert(sub_tree)
         for each in sub_nodes:
@@ -140,6 +158,8 @@ class SVO(object):
                 verb = each.leaves()
                 #Converting list to string
                 verb = ''.join(verb)
+                print(verb)
+
                 #print(verb)
                 
                 #Lemmatization using WordNet lexical database
@@ -149,7 +169,13 @@ class SVO(object):
                 	#print(v)
                 	verb = v.split()
                 	#print("Lemmatised verb",verb)
+                	#print("Y", verb)
+        #         	verb_list = verb_list+ verb
                 
+        # print(verb_list)
+        # out = csv.writer(open("verb_list_file.csv","w"), delimiter=',',quoting=csv.QUOTE_ALL)
+        # out.writerow(verb_list)
+
         #get all pred_verb_phrase_siblings to be able to get the object
         sub_tree  = ParentedTree.convert(sub_tree)
         if verb:
@@ -158,6 +184,7 @@ class SVO(object):
              self.pred_verb_phrase_siblings = pred_verb_phrase_siblings
              #print(pred_verb_phrase_siblings)
 
+        #return verb
         return {'verb':verb}
 
     def process_parse_tree_verb_subject(self,parse_tree):
@@ -171,13 +198,11 @@ class SVO(object):
         
         #List containing subject-verb pairs 
         output_list_sv = []
-        output_list_ov = []
         #Dictionary containing subject-verb pairs
         output_dict_sv ={}
-        #Dictionary containing subject-verb pairs
-        output_dict_ov = {}
-
+        verb_list = []
         output_list = []
+        verb_dict = {}
         i=0
 
         for idx, subtree in enumerate(parse_tree[0].subtrees()):
@@ -203,8 +228,18 @@ class SVO(object):
                     #"""
                     #print(children_dict["VP"])
                     verb = self.get_verbs(children_dict["VP"])
-                    #print(verb)
-                    Object = self.get_object(children_dict["VP"])
+                    print(verb)
+                    # verb_list = verb_list+ verb
+                    # print("STOPPP",verb_list)
+
+                
+        
+                    
+                    # print("YAYY",verb.values())
+                    # for values in verb.values():
+                    # 	verb_list.append(verb[values])
+
+                    # Object = self.get_object(children_dict["VP"])
 
                 #Printing only the subject and verb
                 try:
@@ -222,20 +257,13 @@ class SVO(object):
                         #print(e)
                         continue
                 
-                try:
-                	if verb['verb'] and Object['object']:
-                		output_dict_ov['verb'] = verb['verb']
-                		output_dict_ov['object'] = Object['object']
-                		output_list_ov.append(output_dict_ov)
-
-                except Exception as e:
-                        #print(e)
-                        continue
-
-                
                 #output_list = output_list_sv + output_list_ov
+        
+        # print(verb_list)
+        # out = csv.writer(open("verb_list_file.csv","w"), delimiter=',',quoting=csv.QUOTE_ALL)
+        # out.writerow(verb_list)
 
-        return output_list_sv
+        return output_dict_sv
     
 
     def process_parse_tree_verb_object(self,parse_tree):
@@ -247,11 +275,7 @@ class SVO(object):
         # Step 1 - Extract all the parse trees that start with 'S'
         svo_list = [] # A List of SVO pairs extracted
         
-        #List containing subject-verb pairs 
-        output_list_sv = []
         output_list_ov = []
-        #Dictionary containing subject-verb pairs
-        output_dict_sv ={}
         #Dictionary containing subject-verb pairs
         output_dict_ov = {}
 
@@ -284,26 +308,12 @@ class SVO(object):
                     #print(verb)
                     Object = self.get_object(children_dict["VP"])
 
-                #Printing only the subject and verb
-                try:
-                	if subject['subject'] and verb['verb']:
-                		output_dict_sv['verb'] = verb['verb']
-                		output_dict_sv['subject'] = subject['subject']
-                		output_list_sv.append(output_dict_sv)
-                # try:
-                #     if subject['subject'] and predicate['predicate'] and Object['object']:
-                #         output_dict['subject'] = subject['subject']
-                #         output_dict['predicate'] = predicate['predicate']
-                #         output_dict['object'] = Object['object']
-                #         output_list.append(output_dict)
-                except Exception as e:
-                        #print(e)
-                        continue
-                
                 try:
                 	if verb['verb'] and Object['object']:
                 		output_dict_ov['verb'] = verb['verb']
                 		output_dict_ov['object'] = Object['object']
+                		if output_dict_ov.keys() is verb:
+                			print("SLEEP", list(output_dict_ov.values()))
                 		output_list_ov.append(output_dict_ov)
 
                 except Exception as e:
@@ -313,8 +323,9 @@ class SVO(object):
                 
                 #output_list = output_list_sv + output_list_ov
 
-        return output_list_ov
+        return output_dict_ov
     
+
     def sentence_split(self,text):
         """
         returns the Parse Tree of a Sample
@@ -335,24 +346,113 @@ class SVO(object):
 svo = SVO()
 file = open(r"C:\Users\mehar\Desktop\IIIT_Winter\pizza.txt", "r")
 sentence = file.read()
-
+    
+# sentence = "Andreas loves soccer. He is also very good at it. Andreas likes his dog. Barack Obama likes the legislation"
 sentences =  svo.sentence_split(sentence)
 val_sub_verb = []
 val_obj_verb = []
+
+val = []
+verb_list_final = ['']
 for sent in sentences:
     root_tree = svo.get_parse_tree(sent)
+    # sub.append(svo.get_object(root_tree))
     val_sub_verb.append(svo.process_parse_tree_verb_subject(next(root_tree)))
     # val_obj_verb.append(svo.process_parse_tree_verb_object(next(root_tree)))
 
 print("Subject-Verb Pairs")
+
+df_sv = pd.DataFrame(val_sub_verb)
+print(df_sv)
+df_sv_2 = df_sv.dropna()
+print(df_sv_2)
+print(df_sv_2['subject'].apply(''.join))
+
+df_sv_final = pd.concat([df_sv_2['subject'].apply(''.join),pd.get_dummies(df_sv_2['verb'].apply(''.join))],axis=1)
+print("FINALLLY")
+print(df_sv_final)
+
+
+df_sv_final.to_csv("final_5.csv",index=False)
+
 print(*val_sub_verb, sep = "\n")
+
 # print(*val_obj_verb, sep = "\n")
 for sent in sentences:
     root_tree = svo.get_parse_tree(sent)
     # val_sub_verb.append(svo.process_parse_tree_verb_subject(next(root_tree)))
     val_obj_verb.append(svo.process_parse_tree_verb_object(next(root_tree)))
 print("Object-Verb Pairs")
+
+df_ov = pd.DataFrame(val_obj_verb)
+print(df_ov)
+df_ov_2 = df_ov.dropna()
+print(df_ov_2)
+print(df_ov_2['object'].apply(''.join))
+
+df_ov_final = pd.concat([df_ov_2['object'].apply(''.join),pd.get_dummies(df_ov_2['verb'].apply(''.join))],axis=1)
+print("FINALLLY")
+df_ov_final.reindex(index=range(len(df_ov_final)))
+print(df_ov_final)
+# pd.get_dummies(df_ov_final,dummy_na=True)
+
+df_ov_final.to_csv("final_6.csv", index=False)
 print(*val_obj_verb, sep = "\n")
 
+result = pd.concat([df_sv_final,df_ov_final], axis =0)
+print(result)
 
+result = result.replace(np.nan, '', regex = True)
+result['final'] = result["object"].map(str) + result["subject"]
+print(result)
+
+# columns = ['object, subject']
+# result.drop(columns[], inplace=True, axis=0)
+result.pop('object')
+result.pop('subject')
+print(result)
+result.to_csv("final_7.csv", index=False)
+
+result_new = result[['final']].copy()
+print(result_new)
+
+result_new_2 = result.drop('final', axis = 1)
+print(result_new_2)
+
+result_final = pd.concat([result_new, result_new_2], axis = 1)
+print(result_final)
+# result_final.replace(r'/s+', np.nan, regex=True)
+# result_final.fillna(0)
+
+def recode_empty_cells(dataframe, list_of_columns):
+
+    for column in list_of_columns:
+      dataframe[column] = dataframe[column].replace(r'\s+', np.nan, regex=True)
+      dataframe[column] = dataframe[column].fillna(0)
+
+    return dataframe
+
+# def convert_fill(df):
+#     return df.stack().apply(pd.to_numeric, errors='ignore').fillna(0).unstack()
+
+# result_final_final = convert_fill(result_final)
+# list(result_final.columns.values)
+result_final_final = recode_empty_cells(result_final,list(result_final.columns.values))
+result_final_final.to_csv("final_8.csv", index=False)
+
+for sent in sentences:
+    root_tree = svo.get_parse_tree(sent)
+    val.append(svo.get_verbs_list(next(root_tree)))
+    # val_sub_verb.append(svo.process_parse_tree_verb_subject(next(root_tree)))
+print("Verb_list",val)
+for sublist in val:
+    for item in sublist:
+        verb_list_final.append(item)
+print("Verb_list",verb_list_final)
+
+#Keeping the list unique
+verb_list_final = list(set(verb_list_final))
+print("Verb_list unique",verb_list_final)
+# out = csv.writer(open("verb_list_file_8.csv","w"), delimiter=',',quoting=csv.QUOTE_ALL)
+# out.writerow(verb_list_final)
 
