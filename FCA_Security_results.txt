@@ -176,5 +176,62 @@ unauthorized
 
 Threat: NO CONCEPT FOUND
 
+PDF9:
+
+Vulnerable:
+Attack
+Session
+Concept
+Cybersecurity 
+weakness
+exploit
+computing 
+systems
+Risk
+Factor
+unprotected
+
+Threat:
+Danger
+harm
+passive
+action
+security
+management
+damage
+
+PDF10:
+
+Vulnerable:
+Information
+Assurance
+Malicious
+Network
+security
+
+Threat:
+vulnerabilities
+loss
+damage
+asset
+risk
+function
+
+PDF11:
+
+Vulnerablities:
+Sensitive
+bug
+encryption
+critical
+algorithms
+checks
+
+Threat:
+cybersecurity
+virus
+attack
+phishing
+spyware
 
 
